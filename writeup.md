@@ -46,6 +46,8 @@ The distortion co-efficients are used to undistort the images. Here is an exampl
 
 ### Pipeline (single images)
 
+The image is put through the pipeline by the `ImageProcessor` class.
+
 #### 1. Provide an example of a distortion-corrected image.
 
 As mentioned before, the distortion co-efficient is used to undistort the camera images of the road. Here is an example:
