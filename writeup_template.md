@@ -1,9 +1,5 @@
 ## Writeup Template
 
-### You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
-
----
-
 **Advanced Lane Finding Project**
 
 The goals / steps of this project are the following:
@@ -19,96 +15,132 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/undistort_output.png "Undistorted"
-[image2]: ./test_images/test1.jpg "Road Transformed"
-[image3]: ./examples/binary_combo_example.jpg "Binary Example"
-[image4]: ./examples/warped_straight_lines.jpg "Warp Example"
-[image5]: ./examples/color_fit_lines.jpg "Fit Visual"
-[image6]: ./examples/example_output.jpg "Output"
-[video1]: ./project_video.mp4 "Video"
+[image1]: ./output_images/undistored11.jpg "Undistorted"
+[image2]: ./output_images/undistorted_road1.jpg "Road Transformed"
+[image3]: ./output_images/threshold1.jpg "Binary Example"
+[image4]: ./output_images/straight_lines_perspective.png "Straight line Image for Perspective Transform"
+[image5]: ./output_images/perspective_after_1.jpg "Warp of straight line example"
+[image6]: ./output_images/perspective_after_2.jpg "Warp of curved line example"
+[image7]: ./output_images/centroid1.jpg "Fit Visual"
+[image8]: ./output_images/road/road1.jpg "Output"
+[video1]: ./annotated_project_video_1.mp4 "Video"
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/571/view) Points
 
-### Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
+### Here I will consider the rubric points individually and describe how I addressed each point in my implementation. All code references will point to mark-down headings in the provided Jupyter notebook.  
 
 ---
-
-### Writeup / README
-
-#### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Advanced-Lane-Lines/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
-
-You're reading it!
 
 ### Camera Calibration
 
 #### 1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
 
-The code for this step is contained in the first code cell of the IPython notebook located in "./examples/example.ipynb" (or in lines # through # of the file called `some_file.py`).  
+The camera calibration is done against images of a 9x6 chessboard.
+The first step in camera calibration is to collect the object points of the inner corners 9x6 chessboard. The object points are (x,y,z) cartesian co-ordinates with z being 0 since the images are two-dimensional.
+The provided example images of the chessboard are used to collect the cartesian co-ordinates of the inner corners in the images. This is done through the openCV library methods `findChessboardCorners` and `drawChessboardCorners`.
+The camera matrix and distortion co-efficients that map the object points to the image points are then calculated using the openCV method  `calibrateCamera`.
 
-I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
+The distortion co-efficients are used to undistort the images. Here is an example:
 
-I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result: 
-
-![alt text][image1]
+![Undistored image][image1]
 
 ### Pipeline (single images)
 
 #### 1. Provide an example of a distortion-corrected image.
 
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
-![alt text][image2]
+As mentioned before, the distortion co-efficient is used to undistort the camera images of the road. Here is an example:
+![Undistored Road Image][image2]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
-I used a combination of color and gradient thresholds to generate a binary image (thresholding steps at lines # through # in `another_file.py`).  Here's an example of my output for this step.  (note: this is not actually from one of the test images)
+Code Section: ```Perspective Transform```  
 
-![alt text][image3]
+The thresholding is composed of the following elements:
+- V channel thresholding in an HSV converted image
+- S channel thresholding in an HSL converted channel
+- Gradient magnitude
+- Gradient direction
+- X-Gradient
+- Y-Gradient
+
+The above elements are combined as follows:  
+`((X-Gradient && Y-Gradient) || (Gradient-Magnitude && Gradient-Direction)) || (V-Threshold || S-threshold)`
+
+An example of the resulting image is:
+![Binary Image][image3]
 
 #### 3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+Code-Section: ```Perspective Transform```  
+The perspective trasnsform is performed using the openCV function `getPerspectiveTransform`.
+An image with straight lanes is inspected and four cartesian points forming a trapezoid are selected. These are then mapped on to four desired points forming a rectangle. 
 
-```python
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
-```
 
-This resulted in the following source and destination points:
+Source and Destination points used:
 
 | Source        | Destination   | 
 |:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
+| 593, 450      | 300, 0        | 
+| 684, 450      | 950, 0        |
+| 1095, 720     | 950, 720      |
+| 195, 720      | 300, 720      |
 
-I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
+![Perspective Transform Input][image4]
 
-![alt text][image4]
+The resulting perspective transform is verified by checking that
+- The straight lines are straight and parallel in the transformed image
+![Transformed Straight line image][image5]
+- The curved lines are parallel in the transformed image
+![Transformed curved line image][image6]
+
 
 #### 4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+Code Reference: `Lane Detection` Class: `Tracker`
 
-![alt text][image5]
+The window-centroid approach described in the course is utilized to detect lane pixels.
+The method consists of dividing the image into 9 horizontal slices each of width 25 pixels.
+The y co-ordinates are dictated by the image height and the slice height (80 px)
+The x co-ordinates are computed using the following approach:
+- Identify a `target region` in the image slice
+- Reduce the image to one-dimension (x co-ordinate)  by summing the pixels in the y-direction of the slice
+- Apply one-dimensional discrete convolution on the `target region`
+- The index corresponding to the maximum value (meeting a threshold value) in the convolution is the x-co-ordinate (adjusted for center since the index of max value will correspond to the right edge of the convolution signal window). If the maximum value does not meet the threshold value, previously found centroid value is used.
+
+The target region for the first horiziontal slice is:  
+y: Bottom quarter of the image. The bottom quarter is chosen based on the assumption that the rest of the image will contain features of lesser interest like landscape.  
+x: Left half of the image for left lane and right half of the image for the right lane.  
+
+The target region for subsequent horizontal slices are:  
+y: Window height  
+x: Previous centroid's `x` +/- 100 pixels  
+
+This results in 9 window centroids in x-y cartesian co-ordinates representing points on the left and right lanes respectively.
+For subsequent images, the values are smoothed using a moving average of 9 centroids.
+
+An example image with window centroids:
+![Window Centroids][image7]
+
+These points are fitted to a second-degree polynomial to obtain the lane line equation. (Code Reference: `Tracker::fit_window_centroids`)
+The resulting lane line is plotted onto the original image using the inverse perspective transform.
 
 #### 5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
-I did this in lines # through # in my code in `my_other_file.py`
+Code Reference: `Lane Detection` Class: `Tracker`
+
+The radius of curvature is computed using the arithmatic formula utilizing the first-order and second-order derivates of the lanle line equation. The lane line equation should however represent lines in real world space and not the pixel space
+Using the given ratios of pixels to lane lines, a new set of polynomials are fitted in the real world space. (Code Reference: `Tracker::fit_window_centroids`).
+
+Ratio of meters to pixels:  
+`Y: =30/720  X: 3.7/700`  
+
+The vehicle position is computed as an offset from the lane center assuming the camera was mounted on the center of the vehicle. As such, it is the difference between the x co-ordinates of the center of the computed left and right lane at the bottom of the image and the half of the image width. The resulting pixel value is scaled to real world terms by the provided ratios. 
 
 #### 6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
+This operation is done in `Tracker::polyfill_road`.
+Here is an example:
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
-
-![alt text][image6]
+![Plotted Lane Lines][image8]
 
 ---
 
@@ -116,12 +148,16 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result][video1]
 
 ---
 
 ### Discussion
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
-
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+- Identifying the points to perform the perspective transform was done manually.
+- The gradient and color threshold tuning was a manual process
+- Lane markings within the lane lines would throw off the lane positioning algorithm
+- Mix of road surfaces causing color gradients would throw off the lane positioning algorithm
+- The algorithm could be thrown off by the image quality of the camera. For example, debris on the camera could compromise the image quality.
+- The algorithm does not use the lanes identified in the previous vide frame These could be re-used to perform a more targeted search for lanes.
