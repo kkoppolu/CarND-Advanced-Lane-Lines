@@ -116,7 +116,7 @@ y: Window height
 x: Previous centroid's `x` +/- 100 pixels  
 
 This results in 9 window centroids in x-y cartesian co-ordinates representing points on the left and right lanes respectively.
-For subsequent images, the values are smoothed using a moving average of 9 centroids.
+For subsequent images, the values are smoothed using a moving average of 11 centroids.
 
 An example image with window centroids:
 ![Window Centroids][image7]
